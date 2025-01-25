@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/MuxN4/pow/block"
 	"github.com/MuxN4/pow/pow"
+
+	"github.com/fatih/color"
 )
 
 type Blockchain struct {
@@ -14,6 +17,8 @@ type Blockchain struct {
 
 // Creates a blockchain with a genesis block
 func NewBlockchain() *Blockchain {
+	color.Cyan("🚀 Starting Mining Process...")
+
 	genesisBlock := block.NewBlock(0, "Genesis Block", "", 2)
 	powInstance := pow.NewProofOfWork(genesisBlock)
 	success, _, _ := powInstance.Mine()
@@ -23,6 +28,18 @@ func NewBlockchain() *Blockchain {
 	}
 
 	return &Blockchain{Blocks: []*block.Block{genesisBlock}}
+}
+
+// converts duration to human-readable format
+func formatDuration(d time.Duration) string {
+	switch {
+	case d < time.Millisecond:
+		return fmt.Sprintf("%dµs", d.Microseconds())
+	case d < time.Second:
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	default:
+		return fmt.Sprintf("%.2fs", d.Seconds())
+	}
 }
 
 // Where mining and adding a new block to the blockchain takes place
@@ -37,13 +54,24 @@ func (bc *Blockchain) AddBlock(data string, difficulty int) *block.Block {
 
 	success, nonce, duration := powInstance.Mine()
 	if !success {
+		color.Red("❌ Failed to mine block")
 		return nil
 	}
 
 	bc.Blocks = append(bc.Blocks, newBlock)
 
-	fmt.Printf("Block mined: Difficulty=%d, Nonce=%d, Time=%v\n",
-		difficulty, nonce, duration)
+	color.Yellow("⛏️  Block mined!")
+	fmt.Printf("    %s:   %d\n", color.CyanString("Difficulty"), difficulty)
+	fmt.Printf("    %s:        %d\n", color.CyanString("Nonce"), nonce)
+	fmt.Printf("    %s:         %s\n", color.GreenString("Time"), formatDuration(duration))
+	fmt.Printf("    %s:         %s\n", color.BlueString("Hash"), newBlock.Hash)
+
+	// Handle previous hash display
+	prevHashDisplay := previousHash
+	if prevHashDisplay == "" {
+		prevHashDisplay = "[Genesis Block]"
+	}
+	fmt.Printf("    %s:    %s\n\n", color.MagentaString("Prev Hash"), prevHashDisplay)
 
 	return newBlock
 }
@@ -57,8 +85,5 @@ func main() {
 		blockchain.AddBlock(fmt.Sprintf("Transaction at difficulty %d", diff), diff)
 	}
 
-	for _, block := range blockchain.Blocks {
-		fmt.Printf("Block #%d: Hash=%s, Prev=%s, Difficulty=%d\n",
-			block.Index, block.Hash, block.PreviousHash, block.Difficulty)
-	}
+	color.Green("🎉 Mining Complete!")
 }
